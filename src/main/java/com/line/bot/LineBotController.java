@@ -13,6 +13,7 @@ import com.linecorp.bot.model.event.message.ImageMessageContent;
 import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.message.ImageMessage;
 import com.linecorp.bot.model.message.Message;
+import com.linecorp.bot.model.message.StickerMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.linecorp.bot.model.response.BotApiResponse;
@@ -43,14 +44,14 @@ public class LineBotController {
     private LineMessagingClient lineMessagingClient;
 
     final String netflixRoom = LineGroupId.netflixGroupId;
-    //    @Scheduled(cron = "${cron.expression}")
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Bangkok")
     public void cronScheduleTaskYoutube() {
         logger.info("Scheduled tasks - {}", ZonedDateTime.now());
         pushText(netflixRoom,new TextMessage("Time to pay YouTube Premium!!!"));
+        pushSticker(netflixRoom,"6632","11825377");
         pushImage(netflixRoom,QRCodeUrl.youtubePrompPayUrl);
     }
-
+    //TODO add youtube scheduler
     private final String youtubeRoom = LineGroupId.youtubeGroupId;
 
     @EventMapping
@@ -90,15 +91,9 @@ public class LineBotController {
     private void handleTextContent(String replyToken, Event event, TextMessageContent content) {
         String text = content.getText();
         String userId = event.getSource().getUserId();
-//        reply(replyToken,content);
-//        System.out.println(text);
-
         switch (text) {
             case "Image": {
                 thankMessage(userId);
-//                String str = "https://i0.wp.com/applewoodfresh.com/wp-content/uploads/2018/11/apples_jonagold.png?fit=600%2C600&ssl=1";
-//                pushImage(userId,str);
-//                reply(replyToken,imageMessage);
                 break;
             }
             case "Profile": {
@@ -117,6 +112,12 @@ public class LineBotController {
                 pushImage(event.getSource().getSenderId(),qr);
                 break;
             }
+            case "test sticker": {
+                pushSticker(event.getSource().getSenderId(),"6632","11825377");
+                break;
+            }
+
+
         }
     }
 
@@ -145,6 +146,20 @@ public class LineBotController {
             return;
         }
         System.out.println("Successfully Pushed Image");
+    }
+
+    // Push Image Message to UserId,GroupId or RoomId with URL
+    private void pushSticker(String pushId,String packageId, String eventId) {
+        StickerMessage stickerMessage = new StickerMessage(packageId,eventId);
+        PushMessage pushMessage = new PushMessage(pushId,stickerMessage);
+        BotApiResponse botApiResponse;
+        try {
+            botApiResponse = lineMessagingClient.pushMessage(pushMessage).get();
+        } catch (InterruptedException | ExecutionException exception) {
+            exception.printStackTrace();
+            return;
+        }
+        System.out.println("Successfully Pushed Sticker");
     }
 
     // Reply Text message to sender with ReplyToken
