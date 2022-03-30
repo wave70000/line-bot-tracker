@@ -1,4 +1,4 @@
-package com.line.LineBot;
+package com.line.bot;
 
 import com.linecorp.bot.model.event.Event;
 import com.linecorp.bot.model.event.MessageEvent;
@@ -11,29 +11,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@LineMessageHandler
+@EnableScheduling
 public class LineBotApplication {
-	private static Logger logger = LoggerFactory.getLogger(LineBotApplication.class);
-
+	private static final Logger logger = LoggerFactory.getLogger(LineBotApplication.class);
 
 	public static void main(String[] args) {
 		SpringApplication.run(LineBotApplication.class, args);
-	}
-
-	@EventMapping
-	public Message handleMessageEvent(MessageEvent<TextMessageContent> event) {
-		logger.info("event: " +
-				event.getMessage().getId() + " : " +
-				event.getMessage().getText());
-//		System.out.println("event: " + event);
-		return new TextMessage(event.getMessage().getText());
-	}
-
-	@EventMapping
-	public void handleDefaultMessageEvent(Event event) {
-//		System.out.println("event: " + event);
 	}
 
 }
