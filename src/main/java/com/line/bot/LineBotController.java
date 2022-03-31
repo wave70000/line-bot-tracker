@@ -5,10 +5,7 @@ import com.line.bot.config.QRCodeUrl;
 import com.linecorp.bot.client.LineMessagingClient;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
-import com.linecorp.bot.model.event.Event;
-import com.linecorp.bot.model.event.JoinEvent;
-import com.linecorp.bot.model.event.LeaveEvent;
-import com.linecorp.bot.model.event.MessageEvent;
+import com.linecorp.bot.model.event.*;
 import com.linecorp.bot.model.event.message.ImageMessageContent;
 import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.message.ImageMessage;
@@ -29,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.Timestamp;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,7 +42,7 @@ public class LineBotController {
     private LineMessagingClient lineMessagingClient;
 
     private final String youtubeRoom = LineGroupId.youtubeGroupId;
-//    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Bangkok")
+    @Scheduled(cron = "0 0 9 3 * *", zone = "Asia/Bangkok")
     public void cronScheduleTaskYoutube() {
         logger.info("Scheduled tasks - {}", ZonedDateTime.now());
         pushText(youtubeRoom,new TextMessage("Time to pay YouTube Premium!!!"));
@@ -53,7 +51,7 @@ public class LineBotController {
     }
 
     private final String netflixRoom = LineGroupId.netflixGroupId;
-//    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Bangkok")
+    @Scheduled(cron = "0 0 9 26 * *", zone = "Asia/Bangkok")
     public void cronScheduleTaskNetflix() {
         logger.info("Scheduled tasks - {}", ZonedDateTime.now());
         pushText(netflixRoom, new TextMessage("Time to pay Netflix!!!"));
@@ -75,19 +73,29 @@ public class LineBotController {
         System.out.println("event: " + event);
         if (roomSplitter(event)) {
             String userId = event.getSource().getUserId();
-            thankMessage(userId);
+            thankMessage(event.getSource().getSenderId());
         }
     }
 
     @EventMapping
     public void handleJoinEvent(JoinEvent event) {
-        String replyToken = event.getReplyToken();
-        replyText(replyToken, new TextMessage("Joined " + event.getSource()));
+        String adminId = "U61f804b24760bf01490c70f3791b8905";
+        Timestamp ts = new Timestamp(event.getTimestamp().toEpochMilli());
+        pushText(adminId, new TextMessage("Joined at " + ts));
+        pushText(adminId,new TextMessage(event.getSource().getSenderId()));
     }
 
     @EventMapping
     public void handleLeaveEvent(LeaveEvent event) {
         System.out.println("Leaved " + event.getSource());
+    }
+
+    @EventMapping
+    public void handleFollowEvent(FollowEvent event) {
+        String adminId = "U61f804b24760bf01490c70f3791b8905";
+        System.out.println(event.getSource().getUserId()+" add me to fried");
+        pushText(adminId, new TextMessage(event.getSource().getUserId()+" add me to fried"));
+
     }
 
     @EventMapping
