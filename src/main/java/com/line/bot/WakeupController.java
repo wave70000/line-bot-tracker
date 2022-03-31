@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class WakeupController {
-    private Logger logger = LoggerFactory.getLogger(WakeupController.class);
+    private final Logger logger = LoggerFactory.getLogger(WakeupController.class);
 
     @GetMapping("/wakeup")
     public String wakeUp() {

@@ -43,16 +43,23 @@ public class LineBotController {
     @Autowired
     private LineMessagingClient lineMessagingClient;
 
-    final String netflixRoom = LineGroupId.netflixGroupId;
-    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Bangkok")
+    private final String youtubeRoom = LineGroupId.youtubeGroupId;
+//    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Bangkok")
     public void cronScheduleTaskYoutube() {
         logger.info("Scheduled tasks - {}", ZonedDateTime.now());
-        pushText(netflixRoom,new TextMessage("Time to pay YouTube Premium!!!"));
-        pushSticker(netflixRoom,"6632","11825377");
-        pushImage(netflixRoom,QRCodeUrl.youtubePrompPayUrl);
+        pushText(youtubeRoom,new TextMessage("Time to pay YouTube Premium!!!"));
+        pushSticker(youtubeRoom,"6632","11825377");
+        pushImage(youtubeRoom,QRCodeUrl.youtubePrompPayUrl);
     }
-    //TODO add youtube scheduler
-    private final String youtubeRoom = LineGroupId.youtubeGroupId;
+
+    private final String netflixRoom = LineGroupId.netflixGroupId;
+//    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Bangkok")
+    public void cronScheduleTaskNetflix() {
+        logger.info("Scheduled tasks - {}", ZonedDateTime.now());
+        pushText(netflixRoom, new TextMessage("Time to pay Netflix!!!"));
+        pushSticker(netflixRoom, "6632", "11825377");
+        pushImage(netflixRoom, QRCodeUrl.netflixPrompPayUrl);
+    }
 
     @EventMapping
     public void handleMessageEvent(MessageEvent<TextMessageContent> event) {
@@ -109,7 +116,9 @@ public class LineBotController {
             }
             case "test qr": {
                 String qr = QRCodeUrl.youtubePrompPayUrl;
+                String qr2 = QRCodeUrl.netflixPrompPayUrl;
                 pushImage(event.getSource().getSenderId(),qr);
+                pushImage(event.getSource().getSenderId(),qr2);
                 break;
             }
             case "test sticker": {
@@ -122,13 +131,13 @@ public class LineBotController {
     }
 
     // Check message come from expect group or not
-    private boolean roomSplitter(Event event) {
+    private boolean roomSplitter(@NonNull Event event) {
         String groupId = event.getSource().getSenderId();
         return groupId.equals(netflixRoom) || groupId.equals(youtubeRoom);
     }
 
     // Push Image Message to UserId,GroupId or RoomId with URL
-    private void pushImage(String pushId,String imageUrl) {
+    private void pushImage(@NonNull String pushId,@NonNull String imageUrl) {
         URI uri;
         try {
             uri = new URI(imageUrl);
@@ -149,7 +158,7 @@ public class LineBotController {
     }
 
     // Push Image Message to UserId,GroupId or RoomId with URL
-    private void pushSticker(String pushId,String packageId, String eventId) {
+    private void pushSticker(@NonNull String pushId,@NonNull String packageId,@NonNull String eventId) {
         StickerMessage stickerMessage = new StickerMessage(packageId,eventId);
         PushMessage pushMessage = new PushMessage(pushId,stickerMessage);
         BotApiResponse botApiResponse;
@@ -163,7 +172,7 @@ public class LineBotController {
     }
 
     // Reply Text message to sender with ReplyToken
-    private void replyText(String replyToken,TextMessage content) {
+    private void replyText(@NonNull String replyToken,@NonNull TextMessage content) {
         String message = content.getText();
         TextMessage textMessage = new TextMessage(message);
         ReplyMessage replyMessage = new ReplyMessage(
@@ -180,7 +189,7 @@ public class LineBotController {
     }
 
     // Push Text Message to UserId,GroupId or RoomId
-    private void pushText(String pushId,TextMessage content) {
+    private void pushText(@NonNull String pushId,@NonNull TextMessage content) {
         String message = content.getText();
         TextMessage textMessage = new TextMessage(message);
         PushMessage pushMessage = new PushMessage(pushId,content);
@@ -195,7 +204,7 @@ public class LineBotController {
     }
 
     // Say "Profile" to get userID
-    private void getProfile(String userId) {
+    private void getProfile(@NonNull String userId) {
         String displayName;
         UserProfileResponse userProfileResponse;
         try {
@@ -210,7 +219,7 @@ public class LineBotController {
     }
 
     // Push Thanks <DisplayName>
-    private void thankMessage(String userId) {
+    private void thankMessage(@NonNull String userId) {
         if (userId != null) {
             UserProfileResponse userProfileResponse;
             try {
