@@ -42,6 +42,7 @@ public class LineBotController {
     private LineMessagingClient lineMessagingClient;
 
     private final String youtubeRoom = LineGroupId.youtubeGroupId;
+    // cron *(second) *(minute) *(hour) *(day) *(month) *(dayOfWeek)
     @Scheduled(cron = "0 0 9 3 * *", zone = "Asia/Bangkok")
     public void cronScheduleTaskYoutube() {
         logger.info("Scheduled tasks - {}", ZonedDateTime.now());
