@@ -134,8 +134,6 @@ public class LineBotController {
                 pushSticker(event.getSource().getSenderId(),"6632","11825377");
                 break;
             }
-
-
         }
     }
 
