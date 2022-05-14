@@ -1,7 +1,11 @@
 package com.line.bot;
 
+import com.google.firebase.database.DatabaseReference;
 import com.line.bot.config.LineGroupId;
+import com.line.bot.config.LineUniqueId;
 import com.line.bot.config.QRCodeUrl;
+import com.line.bot.firebase.FirebaseInitialize;
+import com.line.bot.firebase.MemberService;
 import com.linecorp.bot.client.LineMessagingClient;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
@@ -17,6 +21,7 @@ import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +32,13 @@ import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -41,6 +51,12 @@ public class LineBotController {
     @Autowired
     private LineMessagingClient lineMessagingClient;
 
+    // Firebase DI
+    private final MemberService memberService;
+    public LineBotController(MemberService memberService) {
+        this.memberService = memberService;
+    }
+
     private final String youtubeRoom = LineGroupId.youtubeGroupId;
     // cron *(second) *(minute) *(hour) *(day) *(month) *(dayOfWeek)
     @Scheduled(cron = "0 0 9 3 * *", zone = "Asia/Bangkok")
@@ -49,6 +65,7 @@ public class LineBotController {
         pushText(youtubeRoom,new TextMessage("Time to pay YouTube Premium!!!"));
         pushSticker(youtubeRoom,"6632","11825377");
         pushImage(youtubeRoom,QRCodeUrl.youtubePrompPayUrl);
+        memberService.updateDueDate("youtube",LocalDateTime.now(ZoneId.of("Asia/Bangkok")));
     }
 
     private final String netflixRoom = LineGroupId.netflixGroupId;
@@ -58,15 +75,44 @@ public class LineBotController {
         pushText(netflixRoom, new TextMessage("Time to pay Netflix!!!"));
         pushSticker(netflixRoom, "6632", "11825377");
         pushImage(netflixRoom, QRCodeUrl.netflixPrompPayUrl);
+        memberService.updateDueDate("netflix",LocalDateTime.now(ZoneId.of("Asia/Bangkok")));
+    }
+
+    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Bangkok")
+    public void cronScheduleTaskCheckAllPay() {
+        logger.info("Scheduled tasks - {}", ZonedDateTime.now());
+
+        //TODO Enable when ready
+//        if (!memberService.checkLastPay("netflix")) {
+//            pushText(netflixRoom, new TextMessage("จ่ายเงินกันด้วยน้าา"));
+//            pushSticker(netflixRoom, "6632", "11825374");
+//        }
+//
+//        if (!memberService.checkLastPay("youtube")) {
+//            pushText(youtubeRoom, new TextMessage("จ่ายเงินกันด้วยน้าา"));
+//            pushSticker(youtubeRoom, "6632", "11825374");
+//        }
+
+//        if (!memberService.checkLastPay("youtube")) {
+//            pushText(LineUniqueId.ADMIN_ID, new TextMessage("จ่ายเงินกันด้วยน้าา"));
+//            pushSticker(LineUniqueId.ADMIN_ID, "6632", "11825374");
+//        }
+
     }
 
     @EventMapping
     public void handleMessageEvent(MessageEvent<TextMessageContent> event) {
-        System.out.println("event: " + event);
+//        logger.info("Event: " + event.getMessage().getText());
         if (roomSplitter(event)) {
             TextMessageContent message = event.getMessage();
             handleTextContent(event.getReplyToken(), event,message);
         }
+        //TODO NEED TO DELETED WHEN DEPLOY
+//        else if (event.getSource().getUserId().equals(LineUniqueId.ADMIN_ID)) {
+//            logger.info("Event from Admin");
+//            pushText(event.getSource().getSenderId(),new TextMessage("@"+getProfile(LineUniqueId.ADMIN_ID)));
+//        }
+
     }
 
     @EventMapping
@@ -74,8 +120,23 @@ public class LineBotController {
         System.out.println("event: " + event);
         if (roomSplitter(event)) {
             String userId = event.getSource().getUserId();
-            thankMessage(event.getSource().getSenderId());
+
+            String groupId = event.getSource().getSenderId();
+            if (groupId.equals(netflixRoom)){
+                memberService.updateLastPay("netflix",userId);
+            }
+            if (groupId.equals(youtubeRoom)) {
+                memberService.updateLastPay("youtube",userId);
+            }
+            pushSticker(event.getSource().getSenderId(), "6136", "10551380");
         }
+        //TODO Test server response when server has sleep (NEED TO DELETED WHEN DEPLOY)
+//        else {
+//            logger.info("Event from Admin");
+//            String userId = event.getSource().getUserId();
+//            memberService.updateLastPay("youtube",userId);
+//            pushText(event.getSource().getSenderId(),new TextMessage("@"+getProfile(LineUniqueId.ADMIN_ID)));
+//        }
     }
 
     @EventMapping
@@ -97,6 +158,40 @@ public class LineBotController {
         System.out.println(event.getSource().getUserId()+" add me to fried");
         pushText(adminId, new TextMessage(event.getSource().getUserId()+" add me to fried"));
 
+    }
+
+    @EventMapping
+    public void handleMemberJoined(MemberJoinedEvent event) {
+        Timestamp ts = new Timestamp(event.getTimestamp().toEpochMilli());
+        pushText(LineUniqueId.ADMIN_ID, new TextMessage(event.getJoined().getMembers() + " Joined at " + ts));
+        String userId = event.getJoined().getMembers().get(0).getUserId();
+
+        if (event.getSource().getSenderId().equals(netflixRoom)){
+            memberService.addNewMember("netflix",userId);
+        }
+        if (event.getSource().getSenderId().equals(youtubeRoom)){
+            memberService.addNewMember("youtube",userId);
+        }
+//        System.out.println(userId);
+//        System.out.println(getProfile(userId));
+//        getProfile(event.getJoined().getMembers().get(0).getUserId());
+    }
+
+    @EventMapping
+    public void handleMemberLeaved(MemberLeftEvent event) {
+        Timestamp ts = new Timestamp(event.getTimestamp().toEpochMilli());
+        pushText(LineUniqueId.ADMIN_ID, new TextMessage(event.getLeft().getMembers() + " Leaved at " + ts));
+        String userId = event.getLeft().getMembers().get(0).getUserId();
+
+        if (event.getSource().getSenderId().equals(netflixRoom)) {
+            memberService.deleteMember("netflix",userId);
+        }
+        if (event.getSource().getSenderId().equals(youtubeRoom)) {
+            memberService.deleteMember("youtube",userId);
+        }
+
+//        System.out.println(userId);
+//        System.out.println(getProfile(userId));
     }
 
     @EventMapping
@@ -144,7 +239,7 @@ public class LineBotController {
     }
 
     // Push Image Message to UserId,GroupId or RoomId with URL
-    private void pushImage(@NonNull String pushId,@NonNull String imageUrl) {
+    public void pushImage(@NonNull String pushId,@NonNull String imageUrl) {
         URI uri;
         try {
             uri = new URI(imageUrl);
@@ -165,7 +260,7 @@ public class LineBotController {
     }
 
     // Push Image Message to UserId,GroupId or RoomId with URL
-    private void pushSticker(@NonNull String pushId,@NonNull String packageId,@NonNull String eventId) {
+    public void pushSticker(@NonNull String pushId,@NonNull String packageId,@NonNull String eventId) {
         StickerMessage stickerMessage = new StickerMessage(packageId,eventId);
         PushMessage pushMessage = new PushMessage(pushId,stickerMessage);
         BotApiResponse botApiResponse;
@@ -179,7 +274,7 @@ public class LineBotController {
     }
 
     // Reply Text message to sender with ReplyToken
-    private void replyText(@NonNull String replyToken,@NonNull TextMessage content) {
+    public void replyText(@NonNull String replyToken,@NonNull TextMessage content) {
         String message = content.getText();
         TextMessage textMessage = new TextMessage(message);
         ReplyMessage replyMessage = new ReplyMessage(
@@ -196,7 +291,7 @@ public class LineBotController {
     }
 
     // Push Text Message to UserId,GroupId or RoomId
-    private void pushText(@NonNull String pushId,@NonNull TextMessage content) {
+    public void pushText(@NonNull String pushId,@NonNull TextMessage content) {
         String message = content.getText();
         TextMessage textMessage = new TextMessage(message);
         PushMessage pushMessage = new PushMessage(pushId,content);
@@ -211,18 +306,19 @@ public class LineBotController {
     }
 
     // Say "Profile" to get userID
-    private void getProfile(@NonNull String userId) {
+    private String getProfile(@NonNull String userId) {
         String displayName;
         UserProfileResponse userProfileResponse;
         try {
             userProfileResponse = lineMessagingClient.getProfile(userId).get();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
-            return;
+            return null;
         }
         displayName = userProfileResponse.getDisplayName();
         System.out.println("User ID: " + userProfileResponse.getUserId() + " Display name: " + userProfileResponse.getDisplayName());
-        pushText(userId,new TextMessage(userId));
+//        pushText(userId,new TextMessage(userId));
+        return displayName;
     }
 
     // Push Thanks <DisplayName>

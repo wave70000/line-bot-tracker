@@ -6,6 +6,7 @@ target/
 
 ### Secret ###
 /src/main/resources/application.yml
+/src/main/resources/serviceAccountKey.json
 
 ### STS ###
 .apt_generated
